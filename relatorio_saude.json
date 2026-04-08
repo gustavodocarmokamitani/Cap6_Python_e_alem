@@ -1,5 +1,23 @@
 [
     {
+        "ID_LEITURA": 11,
+        "ID_MAQUINA": "TRT-001",
+        "TEMP_MOTOR": 80.0,
+        "PRESSAO_HIDR": 180.0,
+        "HORIMETRO_ATU": 150.0,
+        "DATA_LEITURA": "2026-04-08 15:18:57.247158",
+        "ALERTA_GERADO": "NORMAL"
+    },
+    {
+        "ID_LEITURA": 10,
+        "ID_MAQUINA": "TRT-001",
+        "TEMP_MOTOR": 200.0,
+        "PRESSAO_HIDR": 40.0,
+        "HORIMETRO_ATU": 0.0,
+        "DATA_LEITURA": "2026-04-08 15:17:13.117772",
+        "ALERTA_GERADO": "CRÍTICO"
+    },
+    {
         "ID_LEITURA": 9,
         "ID_MAQUINA": "TRT-001",
         "TEMP_MOTOR": 95.0,
