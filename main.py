@@ -2,162 +2,116 @@ import oracledb
 import json
 from datetime import datetime
 
-# --- CONFIGURAÇÕES DE CONEXÃO ---
-# Requisito: Conexão com Banco de Dados (Oracle)
-DB_CONFIG = {
-    "user": "SYSTEM",
-    "password": "oracle",
-    "dsn": "localhost:1521/xe"
-}
+# --- CONFIGURAÇÕES ---
+DB_CONFIG = {"user": "SYSTEM", "password": "oracle", "dsn": "localhost:1521/xe"}
 
-# --- SUBALGORITMOS DE SUPORTE ---
+# --- SUBALGORITMOS DE APOIO (TXT) ---
 
 def carregar_limites_txt():
-    """
-    REQUISITO: Manipulação de arquivos (TXT).
-    Lê os thresholds de um arquivo externo.
-    """
     limites = {"temp_limite": 95.0, "pressao_limite": 160.0}
     try:
         with open('config.txt', 'r') as f:
             for linha in f:
                 if ':' in linha:
                     chave, valor = linha.strip().split(':')
-                    limites[chave] = float(valor)
-        print("⚙️ Configurações de limites carregadas via TXT.")
-    except (FileNotFoundError, ValueError):
-        print("⚠️ Usando limites padrão (config.txt não encontrado ou inválido).")
+                    limites[chave.strip()] = float(valor)
+    except:
+        pass
     return limites
 
 def registrar_log_txt(maquina, status, mensagem):
-    """Grava um histórico de eventos em arquivo de texto."""
     data_hora = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
     with open('log_atividades.txt', 'a', encoding='utf-8') as f:
         f.write(f"[{data_hora}] Máquina: {maquina} | Status: {status} | Obs: {mensagem}\n")
 
-def obter_conexao():
+# --- CONSISTÊNCIA DE DADOS (REQUISITO AVALIADO) ---
+
+def obter_entrada_float(prompt, min_val=0, max_val=1000):
+    """Garante que a entrada seja numérica e dentro de um range lógico."""
+    while True:
+        try:
+            valor = float(input(prompt))
+            if min_val <= valor <= max_val:
+                return valor
+            print(f"❌ Valor fora do intervalo permitido ({min_val} a {max_val}).")
+        except ValueError:
+            print("❌ Entrada inválida! Digite apenas números (use ponto para decimais).")
+
+# --- LÓGICA E PERSISTÊNCIA (ORACLE / JSON) ---
+
+def salvar_no_oracle(dados, status):
     try:
-        return oracledb.connect(**DB_CONFIG)
+        conn = oracledb.connect(**DB_CONFIG)
+        cursor = conn.cursor()
+        sql = """INSERT INTO TB_TELEMETRIA 
+                 (ID_MAQUINA, TEMP_MOTOR, PRESSAO_HIDR, HORIMETRO_ATU, ALERTA_GERADO) 
+                 VALUES (:1, :2, :3, :4, :5)"""
+        cursor.execute(sql, (dados['id'], dados['temp'], dados['pressao'], dados['horimetro'], status))
+        conn.commit()
+        conn.close()
+        return True
+    except oracledb.IntegrityError:
+        print(f"❌ Erro: Máquina {dados['id']} não cadastrada no banco.")
+        return False
     except Exception as e:
-        print(f"❌ Erro de conexão Oracle: {e}")
-        return None
+        print(f"❌ Erro de conexão: {e}")
+        return False
 
-# --- SUBALGORITMOS DE REGRAS DE NEGÓCIO ---
+def gerar_relatorio_json():
+    try:
+        conn = oracledb.connect(**DB_CONFIG)
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM TB_TELEMETRIA ORDER BY DATA_LEITURA DESC")
+        colunas = [col[0] for col in cursor.description]
+        dados = [dict(zip(colunas, row)) for row in cursor]
+        
+        for d in dados: d['DATA_LEITURA'] = str(d['DATA_LEITURA'])
+        
+        with open('relatorio_saude.json', 'w', encoding='utf-8') as f:
+            json.dump(dados, f, indent=4, ensure_ascii=False)
+        print(f"📂 Relatório gerado com sucesso ({len(dados)} registros).")
+        conn.close()
+    except Exception as e:
+        print(f"❌ Falha ao gerar JSON: {e}")
 
-def calcular_status_ativo(telemetria, limites):
-    """
-    REQUISITO: Subalgoritmo com passagem de parâmetros e Dicionários.
-    Determina a saúde do ativo com base nos limites carregados.
-    """
-    temp = telemetria.get('temp_motor')
-    pressao = telemetria.get('pressao_hidraulica')
-    
-    if temp > limites['temp_limite']:
-        return "CRÍTICO", f"Superaquecimento! (Limite: {limites['temp_limite']}°C)"
-    elif pressao < limites['pressao_limite']:
-        return "ALERTA", f"Pressão hidráulica baixa! (Mínimo: {limites['pressao_limite']} PSI)"
-    return "NORMAL", "Operação estável."
-
-# --- SUBALGORITMOS DE PERSISTÊNCIA ---
-
-def salvar_leitura_banco(dados, status):
-    conn = obter_conexao()
-    if conn:
-        try:
-            cursor = conn.cursor()
-            sql = """INSERT INTO TB_TELEMETRIA 
-                     (ID_MAQUINA, TEMP_MOTOR, PRESSAO_HIDR, HORIMETRO_ATU, ALERTA_GERADO) 
-                     VALUES (:1, :2, :3, :4, :5)"""
-            cursor.execute(sql, (
-                dados['id_maquina'], 
-                dados['temp_motor'], 
-                dados['pressao_hidraulica'],
-                dados['horimetro_atu'],
-                status
-            ))
-            conn.commit()
-            print("✅ Dados persistidos no Oracle.")
-        except oracledb.IntegrityError:
-            print(f"❌ ERRO: A máquina {dados['id_maquina']} não está cadastrada no sistema.")
-            print("Cadastre-a no banco de dados antes de enviar telemetrias.")
-        finally:
-            conn.close()
-
-def exportar_diagnostico_json():
-    """
-    REQUISITO: Manipulação de arquivo JSON.
-    Gera relatório estruturado para integração/dashboards.
-    """
-    conn = obter_conexao()
-    if conn:
-        try:
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM TB_TELEMETRIA ORDER BY DATA_LEITURA DESC")
-            colunas = [col[0] for col in cursor.description]
-            historico = [dict(zip(colunas, row)) for row in cursor]
-            
-            for item in historico:
-                if 'DATA_LEITURA' in item:
-                    item['DATA_LEITURA'] = str(item['DATA_LEITURA'])
-
-            with open('relatorio_ativos.json', 'w', encoding='utf-8') as f:
-                json.dump(historico, f, indent=4, ensure_ascii=False)
-            
-            print(f"📂 Relatório exportado: {len(historico)} registros em 'relatorio_ativos.json'.")
-        finally:
-            conn.close()
-
-# --- FLUXO PRINCIPAL ---
+# --- MENU PRINCIPAL ---
 
 def menu():
-    # Carrega limites no início da execução
-    limites_config = carregar_limites_txt()
-
+    limites = carregar_limites_txt()
     while True:
-        print("\n" + "="*40)
-        print("      FARMTECH: MONITORAMENTO DE ATIVOS")
-        print("="*40)
-        print("1. Registrar Telemetria (Campo)")
-        print("2. Gerar Relatório JSON (Completo)")
+        print("\n--- FARMTECH SOLUTIONS: MONITORAMENTO ---")
+        print("1. Registrar Telemetria")
+        print("2. Exportar JSON")
         print("3. Sair")
         
-        opcao = input("\nEscolha uma opção: ")
-        
-        if opcao == "1":
-            try:
-                # REQUISITO: Consistência de dados (Tratamento de tipos)
-                id_maq = input("ID da Máquina: ").upper()
-                temp = float(input("Temperatura do Motor (°C): "))
-                pressao = float(input("Pressão Hidráulica (PSI): "))
-                horimetro = float(input("Horímetro Atual: "))
-                
-                # REQUISITO: Estrutura de dados (Dicionário)
-                dados = {
-                    "id_maquina": id_maq,
-                    "temp_motor": temp,
-                    "pressao_hidraulica": pressao,
-                    "horimetro_atu": horimetro
-                }
-                
-                status, msg = calcular_status_ativo(dados, limites_config)
-                print(f"\nDIAGNÓSTICO: {status}")
-                print(f"MENSAGEM: {msg}")
-                
-                # Persistência em Banco e Log TXT
-                salvar_leitura_banco(dados, status)
+        op = input("Opção: ")
+        if op == "1":
+            id_maq = input("ID da Máquina: ").upper().strip()
+            if not id_maq: continue
+            
+            # Aplicando a consistência pedida no enunciado
+            temp = obter_entrada_float("Temperatura (°C): ", 0, 200)
+            pres = obter_entrada_float("Pressão (PSI): ", 0, 1000)
+            hori = obter_entrada_float("Horímetro: ", 0, 99999)
+            
+            # Lógica de Diagnóstico
+            status = "NORMAL"
+            msg = "Operação Estável"
+            if temp > limites['temp_limite']:
+                status, msg = "CRÍTICO", "Superaquecimento detectado!"
+            elif pres < limites['pressao_limite']:
+                status, msg = "ALERTA", "Baixa pressão hidráulica!"
+            
+            print(f"\n>> Resultado: {status} ({msg})")
+            
+            dados = {"id": id_maq, "temp": temp, "pressao": pres, "horimetro": hori}
+            if salvar_no_oracle(dados, status):
                 registrar_log_txt(id_maq, status, msg)
                 
-            except ValueError:
-                print("❌ ERRO: Use apenas números para Temperatura, Pressão e Horímetro.")
-        
-        elif opcao == "2":
-            exportar_diagnostico_json()
-            
-        elif opcao == "3":
-            print("Finalizando sistema FarmTech...")
+        elif op == "2":
+            gerar_relatorio_json()
+        elif op == "3":
             break
-        else:
-            print("Opção inválida.")
 
 if __name__ == "__main__":
     menu()

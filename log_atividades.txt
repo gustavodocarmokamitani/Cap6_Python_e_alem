@@ -2,3 +2,5 @@
 [08/04/2026 14:30:25] Máquina: TRT-001 | Status: NORMAL | Obs: Operação estável.
 [08/04/2026 14:52:06] Máquina: TRT-001 | Status: NORMAL | Obs: Operação estável.
 [08/04/2026 14:52:43] Máquina: TRT-001 | Status: CRÍTICO | Obs: Superaquecimento! (Limite: 95.0°C)
+[08/04/2026 15:01:39] Máquina: TRT-001 | Status: NORMAL | Obs: Operação Estável
+[08/04/2026 15:02:18] Máquina: TRT-001 | Status: ALERTA | Obs: Baixa pressão hidráulica!
