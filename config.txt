@@ -1,0 +1,2 @@
+temp_limite:95
+pressao_limite:160

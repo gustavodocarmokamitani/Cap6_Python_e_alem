@@ -1,0 +1,47 @@
+[
+    {
+        "ID_LEITURA": 7,
+        "ID_MAQUINA": "TRT-001",
+        "TEMP_MOTOR": 100.0,
+        "PRESSAO_HIDR": 160.0,
+        "HORIMETRO_ATU": 0.0,
+        "DATA_LEITURA": "2026-04-08 14:52:43.556032",
+        "ALERTA_GERADO": "CRÍTICO"
+    },
+    {
+        "ID_LEITURA": 6,
+        "ID_MAQUINA": "TRT-001",
+        "TEMP_MOTOR": 95.0,
+        "PRESSAO_HIDR": 160.0,
+        "HORIMETRO_ATU": 0.0,
+        "DATA_LEITURA": "2026-04-08 14:52:06.981435",
+        "ALERTA_GERADO": "NORMAL"
+    },
+    {
+        "ID_LEITURA": 5,
+        "ID_MAQUINA": "TRT-001",
+        "TEMP_MOTOR": 90.0,
+        "PRESSAO_HIDR": 166.0,
+        "HORIMETRO_ATU": 0.0,
+        "DATA_LEITURA": "2026-04-08 14:30:25.676160",
+        "ALERTA_GERADO": "NORMAL"
+    },
+    {
+        "ID_LEITURA": 2,
+        "ID_MAQUINA": "TRT-001",
+        "TEMP_MOTOR": 110.0,
+        "PRESSAO_HIDR": 70.0,
+        "HORIMETRO_ATU": 0.0,
+        "DATA_LEITURA": "2026-04-08 13:56:43.501300",
+        "ALERTA_GERADO": "CRÍTICO"
+    },
+    {
+        "ID_LEITURA": 1,
+        "ID_MAQUINA": "TRT-001",
+        "TEMP_MOTOR": 85.0,
+        "PRESSAO_HIDR": 50.0,
+        "HORIMETRO_ATU": 0.0,
+        "DATA_LEITURA": "2026-04-08 13:56:10.887327",
+        "ALERTA_GERADO": "ALERTA"
+    }
+]
